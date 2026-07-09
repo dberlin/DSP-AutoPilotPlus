@@ -1,0 +1,76 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>AutoPilotPlus</AssemblyName>
+    <Product>AutoPilotPlus</Product>
+    <Version>0.1.0</Version>
+    <LangVersion>latest</LangVersion>
+    <DebugType>portable</DebugType>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AssemblyTitle>AutoPilotPlus</AssemblyTitle>
+
+    <!-- ==== Local machine paths (edit if your install moves) ==== -->
+    <GameDir>D:\Programs\Gaming\Steam\steamapps\common\Dyson Sphere Program</GameDir>
+    <Managed>$(GameDir)\DSPGAME_Data\Managed</Managed>
+    <BepInExProfile>C:\Users\Joshp\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\Singleplayer</BepInExProfile>
+    <BepInExCore>$(BepInExProfile)\BepInEx\core</BepInExCore>
+    <CruiseAssistPlusDir>$(MSBuildProjectDirectory)\..\CruiseAssistPlus\bin\Release</CruiseAssistPlusDir>
+    <PluginDeployDir>$(BepInExProfile)\BepInEx\plugins\LivingInstinkt-AutoPilotPlus</PluginDeployDir>
+    <!-- r2modman's authoritative cache; it can sync this over the profile on launch, so keep it in sync too. -->
+    <CacheDeployDir>C:\Users\Joshp\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\cache\LivingInstinkt-AutoPilotPlus\0.2.1</CacheDeployDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="CruiseAssistPlus">
+      <HintPath>$(CruiseAssistPlusDir)\CruiseAssistPlus.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(Managed)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(Managed)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(Managed)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(Managed)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExCore)\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(BepInExCore)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="DeployToPlugins" AfterTargets="Build">
+    <MakeDir Directories="$(PluginDeployDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginDeployDir)" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\manifest.json" DestinationFolder="$(PluginDeployDir)" Condition="Exists('$(MSBuildProjectDirectory)\manifest.json')" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\README.md" DestinationFolder="$(PluginDeployDir)" Condition="Exists('$(MSBuildProjectDirectory)\README.md')" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\CHANGELOG.md" DestinationFolder="$(PluginDeployDir)" Condition="Exists('$(MSBuildProjectDirectory)\CHANGELOG.md')" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\icon.png" DestinationFolder="$(PluginDeployDir)" Condition="Exists('$(MSBuildProjectDirectory)\icon.png')" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CacheDeployDir)" Condition="Exists('$(CacheDeployDir)')" ContinueOnError="true" />
+    <Message Importance="high" Text="Deployed $(AssemblyName).dll -> $(PluginDeployDir)" />
+    <Message Importance="high" Text="Deployed $(AssemblyName).dll -> $(CacheDeployDir)" Condition="Exists('$(CacheDeployDir)')" />
+  </Target>
+
+</Project>

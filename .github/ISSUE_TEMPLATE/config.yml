@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & general discussion
+    url: https://github.com/Living-Instinkt/DSP-AutoPilotPlus/discussions
+    about: Ask questions, request help, or share ideas here instead of opening an issue.

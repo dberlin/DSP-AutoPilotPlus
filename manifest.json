@@ -1,0 +1,10 @@
+{
+  "name": "AutoPilotPlus",
+  "version_number": "0.2.7",
+  "website_url": "https://github.com/Living-Instinkt/DSP-AutoPilotPlus",
+  "description": "Full flight automation for DSP: auto ground-launch, boost, warp and landing. Extension for CruiseAssistPlus. Rebuild of tanu/appuns AutoPilot.",
+  "dependencies": [
+    "xiaoye97-BepInEx-5.4.17",
+    "LivingInstinkt-CruiseAssistPlus-0.2.2"
+  ]
+}

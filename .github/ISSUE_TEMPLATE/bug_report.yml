@@ -1,0 +1,68 @@
+name: Bug report
+description: Report a problem with AutoPilotPlus
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue. Please fill in the details below so it can be reproduced.
+  - type: input
+    id: mod-version
+    attributes:
+      label: AutoPilotPlus version
+      placeholder: e.g. 0.2.7
+    validations:
+      required: true
+  - type: input
+    id: cap-version
+    attributes:
+      label: CruiseAssistPlus version
+      placeholder: e.g. 0.2.2
+    validations:
+      required: true
+  - type: input
+    id: dsp-version
+    attributes:
+      label: Dyson Sphere Program version
+      placeholder: e.g. 0.10.34
+    validations:
+      required: true
+  - type: dropdown
+    id: nebula
+    attributes:
+      label: Playing with Nebula (multiplayer)?
+      options:
+        - "No"
+        - "Yes - host"
+        - "Yes - client"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Select a destination in CruiseAssist+ ...
+        2. Arm AutoPilot+ ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: BepInEx log
+      description: Paste the relevant part of BepInEx/LogOutput.log, or drag the file in.
+      render: text
+  - type: textarea
+    id: mods
+    attributes:
+      label: Other installed mods
+      description: List your other mods (or paste your modlist). Conflicts are a common cause.
