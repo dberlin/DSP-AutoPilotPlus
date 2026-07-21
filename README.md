@@ -5,7 +5,13 @@ target in CruiseAssist+ and AutoPilot+ flies you there: it takes off, boosts the
 crosses interstellar space, and (new) settles onto the destination planet.
 
 Fresh rebuild of the original **AutoPilot** (tanu, continued by appuns) for current DSP
-(0.10.34+, Unity 2022.3). Requires **CruiseAssistPlus**.
+(0.10.34+, Unity 2022.3).
+
+> ⚠️ **Dependency — this mod requires [CruiseAssistPlus](https://github.com/Living-Instinkt/DSP-CruiseAssistPlus).**
+> AutoPilot+ is an extension of CruiseAssist+ and will not function without it. Install it from
+> [Thunderstore](https://dsp.thunderstore.io/package/LivingInstinkt/CruiseAssistPlus/)
+> (r2modman/Thunderstore Mod Manager install it automatically as a dependency) or from
+> [GitHub](https://github.com/Living-Instinkt/DSP-CruiseAssistPlus).
 
 ## How it works
 
@@ -21,6 +27,10 @@ Fresh rebuild of the original **AutoPilot** (tanu, continued by appuns) for curr
   Warper, and the core has enough energy — mirroring the game's own warp rule.
 - Approach / **Auto-land**: near the destination it caps speed, climbs clear if the target is behind
   the planet, then bleeds speed as it descends and hands control back to the game to land.
+- **Dark Fog targets**: when you pick a Dark Fog hive or seed in CruiseAssist+, AutoPilot+ warps toward it
+  too (including within the current system, since a seed can be most of a system away) and brakes on the
+  approach so it doesn't overshoot the small, fast target. Braking distance is `Tuning/SeedBrakeRange`
+  (default 400 km).
 
 ## Improvements over the original
 

@@ -16,7 +16,7 @@ namespace AutoPilotPlus
     {
         public const string Guid = "com.livinginstinkt.dsp.autopilotplus";
         public const string Name = "AutoPilotPlus";
-        public const string Version = "0.2.7";
+        public const string Version = "0.3.1";
 
         internal static ManualLogSource Log;
         internal static AutoPilotPlusPlugin Instance;
@@ -48,6 +48,9 @@ namespace AutoPilotPlus
         internal static ConfigEntry<float> UnitsPerAU;
         internal static ConfigEntry<int> WarperItemId;
         internal static ConfigEntry<float> SpaceAltitude;
+        internal static ConfigEntry<float> ApproachBrakeRange;
+        internal static ConfigEntry<float> SeedBrakeRange;
+        internal static ConfigEntry<float> OrbitAltitude;
 
         // Debug
         internal static ConfigEntry<bool> DebugLog;
@@ -99,6 +102,18 @@ namespace AutoPilotPlus
             WarperItemId = Config.Bind("Tuning", "WarperItemId", 1210, "Item id of the Space Warper.");
             SpaceAltitude = Config.Bind("Tuning", "SpaceAltitude", 600f,
                 "Altitude (m above surface) above which the mecha is considered 'in space' and may boost/thrust. Below this it coasts out on launch momentum to save energy.");
+            ApproachBrakeRange = Config.Bind("Tuning", "ApproachBrakeRange", 6000f,
+                new ConfigDescription("Distance (m above the destination surface) at which the approach starts braking. " +
+                    "Inside this range the mecha bleeds speed proportional to remaining distance so it settles into a slow " +
+                    "high orbit instead of coasting in at cruise speed and crashing.", new AcceptableValueRange<float>(1000f, 40000f)));
+            SeedBrakeRange = Config.Bind("Tuning", "SeedBrakeRange", 400000f,
+                new ConfigDescription("Distance (m) from a Dark Fog seed at which to start braking. Seeds are small, " +
+                    "fast-moving points, so braking starts much farther out than a planet approach to avoid overshooting.",
+                    new AcceptableValueRange<float>(10000f, 2000000f)));
+            OrbitAltitude = Config.Bind("Tuning", "OrbitAltitude", 1500f,
+                new ConfigDescription("Target altitude (m above surface) for 'launch to orbit' — selecting the planet you're " +
+                    "standing on climbs to roughly this altitude and holds there instead of flying off to another target.",
+                    new AcceptableValueRange<float>(600f, 20000f)));
 
             DebugLog = Config.Bind("Debug", "DebugLog", false, "Verbose per-tick autopilot logging (why warp did/didn't fire, etc).");
             DebugWindow = Config.Bind("Debug", "DebugWindow", false, "Show the AutoPilot debug overlay.");

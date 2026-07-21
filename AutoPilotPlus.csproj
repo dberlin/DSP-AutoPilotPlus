@@ -4,7 +4,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>AutoPilotPlus</AssemblyName>
     <Product>AutoPilotPlus</Product>
-    <Version>0.1.0</Version>
+    <Version>0.2.9</Version>
     <LangVersion>latest</LangVersion>
     <DebugType>portable</DebugType>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>

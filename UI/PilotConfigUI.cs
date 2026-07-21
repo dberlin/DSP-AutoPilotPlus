@@ -1,4 +1,5 @@
 using BepInEx.Configuration;
+using CruiseAssistPlus.Core;
 using UnityEngine;
 
 namespace AutoPilotPlus.UI
@@ -24,6 +25,7 @@ namespace AutoPilotPlus.UI
         {
             if (!Visible) return;
             Rect = GUILayout.Window(WinId, Rect, Draw, "AutoPilot+ Config");
+            UIUtil.ClampToScreen(ref Rect);
             if (_left != null) { _left.Value = Rect.x; _top.Value = Rect.y; }
         }
 
@@ -79,6 +81,12 @@ namespace AutoPilotPlus.UI
             GUILayout.Label($"Space altitude (climb-out target): {AutoPilotPlusPlugin.SpaceAltitude.Value:0} m");
             AutoPilotPlusPlugin.SpaceAltitude.Value =
                 Mathf.Round(GUILayout.HorizontalSlider(AutoPilotPlusPlugin.SpaceAltitude.Value, 100f, 2000f) / 50f) * 50f;
+            GUILayout.Label($"Approach brake range: {AutoPilotPlusPlugin.ApproachBrakeRange.Value:0} m");
+            AutoPilotPlusPlugin.ApproachBrakeRange.Value =
+                Mathf.Round(GUILayout.HorizontalSlider(AutoPilotPlusPlugin.ApproachBrakeRange.Value, 1000f, 40000f) / 500f) * 500f;
+            GUILayout.Label($"Orbit altitude (launch-to-orbit): {AutoPilotPlusPlugin.OrbitAltitude.Value:0} m");
+            AutoPilotPlusPlugin.OrbitAltitude.Value =
+                Mathf.Round(GUILayout.HorizontalSlider(AutoPilotPlusPlugin.OrbitAltitude.Value, 600f, 20000f) / 100f) * 100f;
 
             GUILayout.Space(4);
             GUILayout.Label("UI", Bold());

@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.3.1
+- The AutoPilot+ window (and its config window) now clamp on-screen, so a saved position combined with a
+  higher CruiseAssist+ UI scale can no longer strand the window off the edge where it couldn't be opened.
+  Requires CruiseAssistPlus 0.3.2.
+
+## 0.3.0
+- **Dark Fog targets.** AutoPilot now arms for CruiseAssist+ Dark Fog selections (hives, seeds,
+  communicators) and warps toward hives/seeds — including intra-system, since a seed can be most of a system
+  away.
+- **Seed-approach braking.** New `Tuning/SeedBrakeRange` (default 400 km): when approaching a Dark Fog seed
+  the mecha stops boosting and bleeds speed proportional to remaining range so it doesn't overshoot the
+  small, fast-moving target. Heading stays CruiseAssist's job.
+
+## 0.2.9
+- Fixed crashing into the destination instead of settling into orbit. The approach now brakes on the way in:
+  within `ApproachBrakeRange` of the destination surface it stops boosting and bleeds speed proportional to
+  the remaining distance, so the mecha arrives slow in a high orbit instead of coasting in at cruise speed
+  and slamming into the ground. Heading stays CruiseAssist's job, so manual steering still works on approach.
+- New: **launch to orbit**. Selecting the planet you're currently standing on now climbs straight out to
+  `OrbitAltitude` and holds there, instead of instantly counting as "already arrived" and doing nothing.
+- New tuning: `ApproachBrakeRange` (default 6000 m) and `OrbitAltitude` (default 1500 m).
+- Requires CruiseAssistPlus 0.2.3 (adds the `SuppressAutoArrival` hand-off used by launch-to-orbit).
+
+## 0.2.8
+- Restored manual steering during interplanetary/interstellar cruise. AutoPilot now owns only boost, warp
+  and forward speed — it no longer rotates the velocity vector itself while cruising in open space. Heading
+  is handed back to CruiseAssist, so you can steer left/right mid-flight and releasing re-aligns with the
+  target (the classic behaviour), governed by `CruiseAssist › RespectManualInput`. Previously AutoPilot
+  overwrote the velocity every tick and returned "handled", bypassing CruiseAssist's manual-input guard, so
+  any manual course change was undone on the next tick. Ground-launch climb-out and near-planet
+  approach/auto-land are unchanged (CruiseAssist has released its target by the time you land).
+
 ## 0.2.7
 - Ground-launch now climbs out of the gravity well as fast as possible without boost. The old code nudged
   the velocity with a soft slerp, but the game holds unboosted sail speed near zero so it only crept up at
