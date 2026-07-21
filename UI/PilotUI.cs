@@ -1,5 +1,6 @@
 using BepInEx.Configuration;
 using CruiseAssistPlus;
+using CruiseAssistPlus.Core;
 using UnityEngine;
 
 namespace AutoPilotPlus.UI
@@ -34,6 +35,7 @@ namespace AutoPilotPlus.UI
 
             Rect.height = Collapsed ? 40 : 230;
             Rect = GUILayout.Window(WinId, Rect, Draw, "AutoPilot+");
+            UIUtil.ClampToScreen(ref Rect); // never let a saved position / UI scale strand it off-screen
             if (_left != null) { _left.Value = Rect.x; _top.Value = Rect.y; _collapsed.Value = Collapsed; }
         }
 
