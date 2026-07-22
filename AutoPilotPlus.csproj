@@ -4,7 +4,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>AutoPilotPlus</AssemblyName>
     <Product>AutoPilotPlus</Product>
-    <Version>0.2.9</Version>
+    <Version>0.3.1</Version>
     <LangVersion>latest</LangVersion>
     <DebugType>portable</DebugType>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -19,7 +19,7 @@
     <CruiseAssistPlusDir>$(MSBuildProjectDirectory)\..\CruiseAssistPlus\bin\Release</CruiseAssistPlusDir>
     <PluginDeployDir>$(BepInExProfile)\BepInEx\plugins\LivingInstinkt-AutoPilotPlus</PluginDeployDir>
     <!-- r2modman's authoritative cache; it can sync this over the profile on launch, so keep it in sync too. -->
-    <CacheDeployDir>C:\Users\Joshp\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\cache\LivingInstinkt-AutoPilotPlus\0.2.1</CacheDeployDir>
+    <CacheDeployDir>C:\Users\Joshp\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\cache\LivingInstinkt-AutoPilotPlus\$(Version)</CacheDeployDir>
   </PropertyGroup>
 
   <ItemGroup>

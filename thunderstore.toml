@@ -1,0 +1,27 @@
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "LivingInstinkt"
+name = "AutoPilotPlus"
+versionNumber = "0.3.1"
+description = "Full flight automation for DSP: auto ground-launch, boost, warp (incl. to Dark Fog hives/seeds) and landing. Extension for CruiseAssistPlus. Rebuild of tanu/appuns AutoPilot."
+websiteUrl = "https://github.com/Living-Instinkt/DSP-AutoPilotPlus"
+containsNsfwContent = false
+[package.dependencies]
+xiaoye97-BepInEx = "5.4.17"
+LivingInstinkt-CruiseAssistPlus = "0.3.3"
+
+[build]
+icon = "./icon.png"
+readme = "./README.md"
+outdir = "./dist"
+[[build.copy]]
+source = "./bin/Release/AutoPilotPlus.dll"
+target = "AutoPilotPlus.dll"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "dyson-sphere-program" ]
+[publish.categories]
+dyson-sphere-program = []
