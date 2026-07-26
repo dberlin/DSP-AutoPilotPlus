@@ -43,13 +43,23 @@ function Step($m) { Write-Host "==> $m" -ForegroundColor Cyan }
 function Info($m) { Write-Host "    $m" -ForegroundColor DarkGray }
 function Fail($m) { Write-Host "RELEASE ABORTED: $m" -ForegroundColor Red; exit 1 }
 
+# Every source file in these repos is UTF-8 without a BOM. Windows PowerShell 5.1's Get-Content/
+# Set-Content are the wrong tools for round-tripping them: Get-Content -Raw falls back to the ANSI
+# codepage on a BOM-less file (so 'x' comes back as three mojibake characters) and Set-Content
+# -Encoding UTF8 writes a BOM. Between them, a version bump used to corrupt every accented character,
+# arrow, and dash in Plugin.cs and the .csproj, and prepend a BOM to manifest.json that Thunderstore's
+# parser can reject. Read and write explicitly instead.
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+function Read-Text($path)        { [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8) }
+function Write-Text($path, $text) { [System.IO.File]::WriteAllText($path, $text, $Utf8NoBom) }
+
 # ---------------------------------------------------------------------------
 # Resolve paths from the manifest
 # ---------------------------------------------------------------------------
 $manifestPath = Join-Path $Root 'manifest.json'
 if (-not (Test-Path $manifestPath)) { Fail 'manifest.json not found next to this script.' }
 
-$manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+$manifest = (Read-Text $manifestPath) | ConvertFrom-Json
 $Mod = $manifest.name
 if (-not $Mod) { Fail 'manifest.json has no "name".' }
 
@@ -92,7 +102,7 @@ if ($unexpected.Count -gt 0) {
 
 # 1b. CHANGELOG top section must be for this version.
 if (-not (Test-Path $changelogPath)) { Fail 'CHANGELOG.md not found.' }
-$changelogText = Get-Content $changelogPath -Raw
+$changelogText = Read-Text $changelogPath
 $firstHeading = ([regex]::Match($changelogText, '(?m)^##\s+.*$')).Value
 if (-not $firstHeading) { Fail 'CHANGELOG.md has no "## " version section.' }
 if ($firstHeading -notmatch [regex]::Escape($Version)) {
@@ -115,8 +125,11 @@ if ($capDep.Count -gt 0) {
 if (-not (Test-Path $readmePath)) { Fail 'README.md not found.' }
 if (-not (Test-Path $iconPath))   { Fail 'icon.png not found.' }
 $png = [System.IO.File]::ReadAllBytes($iconPath)
-$pngW = ($png[16] -shl 24) -bor ($png[17] -shl 16) -bor ($png[18] -shl 8) -bor $png[19]
-$pngH = ($png[20] -shl 24) -bor ($png[21] -shl 16) -bor ($png[22] -shl 8) -bor $png[23]
+# The [int] casts are load-bearing: in Windows PowerShell 5.1 -shl keeps the operand's width, so
+# shifting a [byte] left by 8 or more yields 0 and every icon measures 0x0. IHDR width/height are the
+# four-byte big-endian fields at offsets 16 and 20.
+$pngW = ([int]$png[16] -shl 24) -bor ([int]$png[17] -shl 16) -bor ([int]$png[18] -shl 8) -bor [int]$png[19]
+$pngH = ([int]$png[20] -shl 24) -bor ([int]$png[21] -shl 16) -bor ([int]$png[22] -shl 8) -bor [int]$png[23]
 if ($pngW -ne 256 -or $pngH -ne 256) { Fail "icon.png must be 256x256 (found ${pngW}x${pngH})." }
 
 # 1f. Attribution scan: no tool/AI names in any tracked text file or commit message.
@@ -146,29 +159,29 @@ Info 'Pre-flight OK.'
 # ---------------------------------------------------------------------------
 Step "2/8  Bumping version to $Version"
 
-$csproj = Get-Content $csprojPath -Raw
+$csproj = Read-Text $csprojPath
 $csproj = [regex]::Replace($csproj, '<Version>[^<]*</Version>', "<Version>$Version</Version>")
-Set-Content $csprojPath $csproj -NoNewline -Encoding UTF8
+Write-Text $csprojPath $csproj
 
-$plugin = Get-Content $pluginPath -Raw
+$plugin = Read-Text $pluginPath
 $plugin = [regex]::Replace($plugin, '(public const string Version\s*=\s*")[^"]*(")', "`${1}$Version`${2}")
-Set-Content $pluginPath $plugin -NoNewline -Encoding UTF8
+Write-Text $pluginPath $plugin
 
-$manifestRaw = Get-Content $manifestPath -Raw
+$manifestRaw = Read-Text $manifestPath
 $manifestRaw = [regex]::Replace($manifestRaw, '("version_number"\s*:\s*")[^"]*(")', "`${1}$Version`${2}")
 if ($DepVersion) {
     $manifestRaw = [regex]::Replace($manifestRaw, '(LivingInstinkt-CruiseAssistPlus-)\d+\.\d+\.\d+', "`${1}$DepVersion")
 }
-Set-Content $manifestPath $manifestRaw -NoNewline -Encoding UTF8
+Write-Text $manifestPath $manifestRaw
 
 # thunderstore.toml is the identity source for `tcli publish --file`; keep it in lockstep.
 if (Test-Path $tomlPath) {
-    $toml = Get-Content $tomlPath -Raw
+    $toml = Read-Text $tomlPath
     $toml = [regex]::Replace($toml, '(?m)^(versionNumber\s*=\s*")[^"]*(")', "`${1}$Version`${2}")
     if ($DepVersion) {
         $toml = [regex]::Replace($toml, '(LivingInstinkt-CruiseAssistPlus\s*=\s*")\d+\.\d+\.\d+(")', "`${1}$DepVersion`${2}")
     }
-    Set-Content $tomlPath $toml -NoNewline -Encoding UTF8
+    Write-Text $tomlPath $toml
 }
 Info 'csproj, Plugin.cs, manifest.json, thunderstore.toml updated.'
 
@@ -223,7 +236,7 @@ Step '7/8  GitHub Release'
 $sections = [regex]::Split($changelogText, '(?m)^(?=##\s)') | Where-Object { $_ -match '^##\s' }
 $notes = ($sections | Select-Object -First 1).Trim()
 $notesFile = Join-Path $env:TEMP "$Mod-$Version-notes.md"
-Set-Content $notesFile $notes -Encoding UTF8
+Write-Text $notesFile $notes
 gh release create "v$Version" $zipPath --title "$Mod $Version" --notes-file $notesFile
 if ($LASTEXITCODE -ne 0) { Fail 'gh release create failed.' }
 Remove-Item $notesFile -Force -ErrorAction SilentlyContinue
