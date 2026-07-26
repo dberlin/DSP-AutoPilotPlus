@@ -1,0 +1,20 @@
+<Project>
+  <!--
+    Copy this file to `Directory.Build.props` (same folder) and edit it for your machine. That copy is
+    gitignored, so your real paths never reach the public repo. MSBuild imports it before the .csproj,
+    so anything set here overrides the stock-install defaults there.
+
+    Only override what differs from the defaults:
+      GameDir       DSP install folder. Default: C:\Program Files (x86)\Steam\steamapps\common\Dyson Sphere Program
+      R2ModmanRoot  r2modman game folder. Default: %APPDATA%\r2modmanPlus-local\DysonSphereProgram
+      ProfileName   r2modman profile to deploy into. Default: Default
+
+    If you don't use r2modman, point BepInExProfile straight at the folder holding BepInEx\ instead.
+  -->
+  <PropertyGroup>
+    <GameDir>C:\Program Files (x86)\Steam\steamapps\common\Dyson Sphere Program</GameDir>
+    <ProfileName>Default</ProfileName>
+    <!-- <R2ModmanRoot>$(APPDATA)\r2modmanPlus-local\DysonSphereProgram</R2ModmanRoot> -->
+    <!-- <BepInExProfile>C:\Games\DSP-BepInEx</BepInExProfile> -->
+  </PropertyGroup>
+</Project>

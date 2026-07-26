@@ -11,15 +11,25 @@
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <AssemblyTitle>AutoPilotPlus</AssemblyTitle>
 
-    <!-- ==== Local machine paths (edit if your install moves) ==== -->
-    <GameDir>D:\Programs\Gaming\Steam\steamapps\common\Dyson Sphere Program</GameDir>
+    <!--
+      ==== Machine-specific locations ====
+      This file is public, so it must not carry anyone's real paths. The values below are stock-install
+      guesses; override them for your machine in `Directory.Build.props` next to this file, which is
+      gitignored and which MSBuild imports before this project (so whatever it sets wins). Start from
+      `Directory.Build.props.example`.
+    -->
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Dyson Sphere Program</GameDir>
+    <R2ModmanRoot Condition="'$(R2ModmanRoot)' == ''">$(APPDATA)\r2modmanPlus-local\DysonSphereProgram</R2ModmanRoot>
+    <ProfileName Condition="'$(ProfileName)' == ''">Default</ProfileName>
+
+    <!-- Derived; override the three above rather than these. -->
     <Managed>$(GameDir)\DSPGAME_Data\Managed</Managed>
-    <BepInExProfile>C:\Users\Joshp\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\Singleplayer</BepInExProfile>
+    <BepInExProfile Condition="'$(BepInExProfile)' == ''">$(R2ModmanRoot)\profiles\$(ProfileName)</BepInExProfile>
     <BepInExCore>$(BepInExProfile)\BepInEx\core</BepInExCore>
     <CruiseAssistPlusDir>$(MSBuildProjectDirectory)\..\CruiseAssistPlus\bin\Release</CruiseAssistPlusDir>
     <PluginDeployDir>$(BepInExProfile)\BepInEx\plugins\LivingInstinkt-AutoPilotPlus</PluginDeployDir>
     <!-- r2modman's authoritative cache; it can sync this over the profile on launch, so keep it in sync too. -->
-    <CacheDeployDir>C:\Users\Joshp\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\cache\LivingInstinkt-AutoPilotPlus\$(Version)</CacheDeployDir>
+    <CacheDeployDir Condition="'$(CacheDeployDir)' == ''">$(R2ModmanRoot)\cache\LivingInstinkt-AutoPilotPlus\$(Version)</CacheDeployDir>
   </PropertyGroup>
 
   <ItemGroup>
