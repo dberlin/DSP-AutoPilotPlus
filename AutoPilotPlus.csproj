@@ -28,8 +28,14 @@
     <BepInExCore>$(BepInExProfile)\BepInEx\core</BepInExCore>
     <CruiseAssistPlusDir>$(MSBuildProjectDirectory)\..\CruiseAssistPlus\bin\Release</CruiseAssistPlusDir>
     <PluginDeployDir>$(BepInExProfile)\BepInEx\plugins\LivingInstinkt-AutoPilotPlus</PluginDeployDir>
-    <!-- r2modman's authoritative cache; it can sync this over the profile on launch, so keep it in sync too. -->
-    <CacheDeployDir Condition="'$(CacheDeployDir)' == ''">$(R2ModmanRoot)\cache\LivingInstinkt-AutoPilotPlus\$(Version)</CacheDeployDir>
+    <!--
+      r2modman's authoritative cache; it can sync this over the profile on launch, so keep it in sync too.
+      The cache is keyed by the version r2modman *installed*, which is whatever local zip was imported last
+      and does NOT follow $(Version) — so pinning this to $(Version) meant a version bump deployed to a
+      folder that did not exist, the copy was skipped, and the next launch silently restored the previous
+      DLL over the profile. Every existing cache folder for this mod is refreshed instead (see DeployToCache).
+    -->
+    <CacheRoot Condition="'$(CacheRoot)' == ''">$(R2ModmanRoot)\cache\LivingInstinkt-AutoPilotPlus</CacheRoot>
   </PropertyGroup>
 
   <ItemGroup>
@@ -71,6 +77,21 @@
     </Reference>
   </ItemGroup>
 
+  <!--
+    Fail with one actionable message instead of a wall of CS0246 "type not found" errors when the
+    machine paths are wrong — which is what a fresh clone gets, since Directory.Build.props is
+    gitignored and the defaults above are only stock-install guesses. The CruiseAssistPlus check is
+    separate because that DLL comes from a sibling repo you have to build first, not from an install.
+  -->
+  <Target Name="ValidateLocalPaths" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('$(Managed)\Assembly-CSharp.dll')"
+           Text="Assembly-CSharp.dll not found under &quot;$(Managed)&quot;. Copy Directory.Build.props.example to Directory.Build.props and set &lt;GameDir&gt; to your Dyson Sphere Program install folder (the one containing DSPGAME_Data)." />
+    <Error Condition="!Exists('$(BepInExCore)\BepInEx.dll')"
+           Text="BepInEx.dll not found under &quot;$(BepInExCore)&quot;. Copy Directory.Build.props.example to Directory.Build.props and set &lt;R2ModmanRoot&gt;/&lt;ProfileName&gt; to your r2modman profile — or set &lt;BepInExProfile&gt; directly to the folder containing BepInEx\ if you don't use r2modman." />
+    <Error Condition="!Exists('$(CruiseAssistPlusDir)\CruiseAssistPlus.dll')"
+           Text="CruiseAssistPlus.dll not found under &quot;$(CruiseAssistPlusDir)&quot;. AutoPilotPlus extends CruiseAssistPlus: clone DSP-CruiseAssistPlus as a sibling folder and run 'dotnet build -c Release' there first, or set &lt;CruiseAssistPlusDir&gt; in Directory.Build.props." />
+  </Target>
+
   <Target Name="DeployToPlugins" AfterTargets="Build">
     <MakeDir Directories="$(PluginDeployDir)" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginDeployDir)" />
@@ -78,9 +99,20 @@
     <Copy SourceFiles="$(MSBuildProjectDirectory)\README.md" DestinationFolder="$(PluginDeployDir)" Condition="Exists('$(MSBuildProjectDirectory)\README.md')" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)\CHANGELOG.md" DestinationFolder="$(PluginDeployDir)" Condition="Exists('$(MSBuildProjectDirectory)\CHANGELOG.md')" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)\icon.png" DestinationFolder="$(PluginDeployDir)" Condition="Exists('$(MSBuildProjectDirectory)\icon.png')" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CacheDeployDir)" Condition="Exists('$(CacheDeployDir)')" ContinueOnError="true" />
     <Message Importance="high" Text="Deployed $(AssemblyName).dll -> $(PluginDeployDir)" />
-    <Message Importance="high" Text="Deployed $(AssemblyName).dll -> $(CacheDeployDir)" Condition="Exists('$(CacheDeployDir)')" />
+  </Target>
+
+  <!--
+    Refresh the DLL in every cached copy r2modman holds for this mod, whichever version folder it
+    decides to sync from on the next launch. Batched over the existing folders, so a version bump can
+    never leave a stale cached DLL behind to overwrite the profile.
+  -->
+  <Target Name="DeployToCache" AfterTargets="Build" Condition="Exists('$(CacheRoot)')">
+    <ItemGroup>
+      <CachedDll Include="$(CacheRoot)\*\$(AssemblyName).dll" />
+    </ItemGroup>
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="%(CachedDll.RootDir)%(CachedDll.Directory)" ContinueOnError="true" />
+    <Message Importance="high" Text="Refreshed cached $(AssemblyName).dll in %(CachedDll.Directory)" />
   </Target>
 
 </Project>
