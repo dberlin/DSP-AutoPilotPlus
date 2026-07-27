@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.4
+- The AutoPilot+ panel keeps its title bar when collapsed (it was disappearing along with the title), and
+  its config button is now labelled **Config** rather than a gear glyph DSP's UI font claims to have but
+  draws as nothing.
+- Requires CruiseAssistPlus 0.3.7.
+
 ## 0.3.3
 - Picks up CruiseAssist+ 0.3.6's checkbox and glyph fixes: toggle rows are no longer solid bars with
   disappearing labels, and the **⚙** config button in the title bar no longer renders blank (DSP's UI font

@@ -36,7 +36,8 @@ namespace AutoPilotPlus.UI
             // The window style reserves DspSkin.TitleH at the top for the title bar, so the content
             // height is measured below it.
             Rect.height = DspSkin.TitleH + (Collapsed ? 4f : 196f);
-            Rect = GUILayout.Window(WinId, Rect, Draw, "AutoPilot+");
+            // Empty title: UIUtil.BeginTitleBar draws it, so a collapsed window keeps its bar.
+            Rect = GUILayout.Window(WinId, Rect, Draw, "");
             // Never let a saved position / UI scale strand it off-screen, and claim its area so clicks
             // on it don't also land on the world behind.
             UIUtil.Settle(ref Rect);
@@ -47,10 +48,12 @@ namespace AutoPilotPlus.UI
         /// panels. Drawn before the drag bar so they claim their own clicks.</summary>
         private static void TitleBar()
         {
-            if (UIUtil.TitleButton(Rect, 0, DspSkin.Glyph("✕", "X"))) Visible = false;
-            // DSP's UI font has no gear, so ⚙ rendered as a blank button — fall back through what it does have.
-            if (UIUtil.TitleButton(Rect, 1, DspSkin.Glyph("⚙", "≡", "="))) PilotConfigUI.Visible = !PilotConfigUI.Visible;
-            if (UIUtil.TitleButton(Rect, 2, Collapsed ? "+" : DspSkin.Glyph("–", "-"))) Collapsed = !Collapsed;
+            var bar = UIUtil.BeginTitleBar(Rect, "AutoPilot+");
+            if (bar.Button(DspSkin.Glyph("✕", "X"))) Visible = false;
+            // A word, not a gear: DSP's UI font reports having U+2699 but draws nothing for it, so no
+            // glyph fallback chain can be trusted here.
+            if (bar.Button("Config", 46f)) PilotConfigUI.Visible = !PilotConfigUI.Visible;
+            if (bar.Button(Collapsed ? "+" : DspSkin.Glyph("–", "-"))) Collapsed = !Collapsed;
         }
 
         private static void Draw(int id)

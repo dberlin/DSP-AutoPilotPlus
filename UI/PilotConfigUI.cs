@@ -24,14 +24,15 @@ namespace AutoPilotPlus.UI
         public static void OnGUI()
         {
             if (!Visible) return;
-            Rect = GUILayout.Window(WinId, Rect, Draw, "AutoPilot+ Config");
+            Rect = GUILayout.Window(WinId, Rect, Draw, "");   // title drawn by UIUtil.BeginTitleBar
             UIUtil.Settle(ref Rect);
             if (_left != null) { _left.Value = Rect.x; _top.Value = Rect.y; }
         }
 
         private static void Draw(int id)
         {
-            if (UIUtil.TitleButton(Rect, 0, DspSkin.Glyph("✕", "X"))) Visible = false;
+            var bar = UIUtil.BeginTitleBar(Rect, "AutoPilot+ Config");
+            if (bar.Button(DspSkin.Glyph("✕", "X"))) Visible = false;
             GUILayout.BeginVertical();
 
             AutoPilotPlusPlugin.MasterEnabled.Value =
