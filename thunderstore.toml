@@ -10,7 +10,7 @@ websiteUrl = "https://github.com/Living-Instinkt/DSP-AutoPilotPlus"
 containsNsfwContent = false
 [package.dependencies]
 xiaoye97-BepInEx = "5.4.17"
-LivingInstinkt-CruiseAssistPlus = "0.3.3"
+LivingInstinkt-CruiseAssistPlus = "0.3.5"
 
 [build]
 icon = "./icon.png"
