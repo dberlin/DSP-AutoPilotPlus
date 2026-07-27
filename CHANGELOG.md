@@ -1,24 +1,14 @@
 # Changelog
 
 ## 0.3.4
-- The AutoPilot+ panel keeps its title bar when collapsed (it was disappearing along with the title), and
-  its config button is now labelled **Config** rather than a gear glyph DSP's UI font claims to have but
-  draws as nothing.
-- Requires CruiseAssistPlus 0.3.7.
-
-## 0.3.3
-- Picks up CruiseAssist+ 0.3.6's checkbox and glyph fixes: toggle rows are no longer solid bars with
-  disappearing labels, and the **⚙** config button in the title bar no longer renders blank (DSP's UI font
-  has no gear glyph, so it falls back to one the font has).
-- Requires CruiseAssistPlus 0.3.6.
-
-## 0.3.2
 - **Clicks no longer pass through the AutoPilot+ windows** onto a building, the terrain, the camera or a
   DSP panel behind them. Both windows register the area they cover with CruiseAssist+'s click blocker,
   which raises the game's own "cursor is on the interface" state while you're over one.
-- Both windows pick up CruiseAssist+'s new **game-style skin and font**, and collapse / config / close
-  moved into the AutoPilot+ title bar (**–**, **⚙**, **✕**), freeing the row they used to take.
-- Requires CruiseAssistPlus 0.3.5.
+- Both windows pick up CruiseAssist+'s **game-style skin and font**: dark translucent panel, cyan-steel
+  edging, a real title bar, and checkboxes that read clearly whether a setting is on or off.
+- Collapse, config and close moved into the AutoPilot+ title bar, freeing the row they used to take. A
+  collapsed panel keeps its title bar.
+- Requires CruiseAssistPlus 0.3.7.
 
 ## 0.3.1
 - The AutoPilot+ window (and its config window) now clamp on-screen, so a saved position combined with a
