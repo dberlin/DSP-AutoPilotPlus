@@ -47,9 +47,10 @@ namespace AutoPilotPlus.UI
         /// panels. Drawn before the drag bar so they claim their own clicks.</summary>
         private static void TitleBar()
         {
-            if (UIUtil.TitleButton(Rect, 0, "✕")) Visible = false;
-            if (UIUtil.TitleButton(Rect, 1, "⚙")) PilotConfigUI.Visible = !PilotConfigUI.Visible;
-            if (UIUtil.TitleButton(Rect, 2, Collapsed ? "+" : "–")) Collapsed = !Collapsed;
+            if (UIUtil.TitleButton(Rect, 0, DspSkin.Glyph("✕", "X"))) Visible = false;
+            // DSP's UI font has no gear, so ⚙ rendered as a blank button — fall back through what it does have.
+            if (UIUtil.TitleButton(Rect, 1, DspSkin.Glyph("⚙", "≡", "="))) PilotConfigUI.Visible = !PilotConfigUI.Visible;
+            if (UIUtil.TitleButton(Rect, 2, Collapsed ? "+" : DspSkin.Glyph("–", "-"))) Collapsed = !Collapsed;
         }
 
         private static void Draw(int id)
@@ -61,7 +62,7 @@ namespace AutoPilotPlus.UI
             {
                 bool armed = PilotExtension.State == PilotExtension.PState.Active;
 
-                GUILayout.Label(armed ? "● ARMED" : "○ Inactive",
+                GUILayout.Label(armed ? DspSkin.Glyph("●", "*") + " ARMED" : DspSkin.Glyph("○", "-") + " Inactive",
                     DspSkin.Tinted(DspSkin.Status, armed ? DspSkin.Ok : DspSkin.InkDim));
 
                 if (!string.IsNullOrEmpty(PilotExtension.LaunchStatus))
@@ -75,11 +76,11 @@ namespace AutoPilotPlus.UI
                 if (GUILayout.Button(armed ? "Disarm" : "Arm")) PilotExtension.ToggleArmed();
                 GUILayout.EndHorizontal();
 
-                AutoPilotPlusPlugin.AutoStart.Value = GUILayout.Toggle(AutoPilotPlusPlugin.AutoStart.Value, "Auto-arm on target select");
-                AutoPilotPlusPlugin.AutoLaunch.Value = GUILayout.Toggle(AutoPilotPlusPlugin.AutoLaunch.Value, "Auto-launch from ground");
-                AutoPilotPlusPlugin.AutoLand.Value = GUILayout.Toggle(AutoPilotPlusPlugin.AutoLand.Value, "Auto-land on arrival");
-                AutoPilotPlusPlugin.IgnoreGravity.Value = GUILayout.Toggle(AutoPilotPlusPlugin.IgnoreGravity.Value, "Ignore gravity");
-                AutoPilotPlusPlugin.LocalWarp.Value = GUILayout.Toggle(AutoPilotPlusPlugin.LocalWarp.Value, "Allow local warp");
+                AutoPilotPlusPlugin.AutoStart.Value = UIUtil.Toggle(AutoPilotPlusPlugin.AutoStart.Value, "Auto-arm on target select");
+                AutoPilotPlusPlugin.AutoLaunch.Value = UIUtil.Toggle(AutoPilotPlusPlugin.AutoLaunch.Value, "Auto-launch from ground");
+                AutoPilotPlusPlugin.AutoLand.Value = UIUtil.Toggle(AutoPilotPlusPlugin.AutoLand.Value, "Auto-land on arrival");
+                AutoPilotPlusPlugin.IgnoreGravity.Value = UIUtil.Toggle(AutoPilotPlusPlugin.IgnoreGravity.Value, "Ignore gravity");
+                AutoPilotPlusPlugin.LocalWarp.Value = UIUtil.Toggle(AutoPilotPlusPlugin.LocalWarp.Value, "Allow local warp");
             }
 
             GUILayout.EndVertical();

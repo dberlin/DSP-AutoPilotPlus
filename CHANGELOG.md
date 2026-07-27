@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3
+- Picks up CruiseAssist+ 0.3.6's checkbox and glyph fixes: toggle rows are no longer solid bars with
+  disappearing labels, and the **⚙** config button in the title bar no longer renders blank (DSP's UI font
+  has no gear glyph, so it falls back to one the font has).
+- Requires CruiseAssistPlus 0.3.6.
+
 ## 0.3.2
 - **Clicks no longer pass through the AutoPilot+ windows** onto a building, the terrain, the camera or a
   DSP panel behind them. Both windows register the area they cover with CruiseAssist+'s click blocker,

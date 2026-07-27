@@ -31,27 +31,27 @@ namespace AutoPilotPlus.UI
 
         private static void Draw(int id)
         {
-            if (UIUtil.TitleButton(Rect, 0, "✕")) Visible = false;
+            if (UIUtil.TitleButton(Rect, 0, DspSkin.Glyph("✕", "X"))) Visible = false;
             GUILayout.BeginVertical();
 
             AutoPilotPlusPlugin.MasterEnabled.Value =
-                GUILayout.Toggle(AutoPilotPlusPlugin.MasterEnabled.Value, "Enabled (master)");
+                UIUtil.Toggle(AutoPilotPlusPlugin.MasterEnabled.Value, "Enabled (master)");
 
             GUILayout.Space(4);
             GUILayout.Label("Automation", DspSkin.Header);
             AutoPilotPlusPlugin.AutoStart.Value =
-                GUILayout.Toggle(AutoPilotPlusPlugin.AutoStart.Value, "Auto-arm on target select");
+                UIUtil.Toggle(AutoPilotPlusPlugin.AutoStart.Value, "Auto-arm on target select");
             AutoPilotPlusPlugin.AutoLaunch.Value =
-                GUILayout.Toggle(AutoPilotPlusPlugin.AutoLaunch.Value, "Auto-launch from ground");
+                UIUtil.Toggle(AutoPilotPlusPlugin.AutoLaunch.Value, "Auto-launch from ground");
             AutoPilotPlusPlugin.AutoLand.Value =
-                GUILayout.Toggle(AutoPilotPlusPlugin.AutoLand.Value, "Auto-land on arrival");
+                UIUtil.Toggle(AutoPilotPlusPlugin.AutoLand.Value, "Auto-land on arrival");
             AutoPilotPlusPlugin.IgnoreGravity.Value =
-                GUILayout.Toggle(AutoPilotPlusPlugin.IgnoreGravity.Value, "Ignore gravity while automating");
+                UIUtil.Toggle(AutoPilotPlusPlugin.IgnoreGravity.Value, "Ignore gravity while automating");
 
             GUILayout.Space(4);
             GUILayout.Label("Warp", DspSkin.Header);
             AutoPilotPlusPlugin.LocalWarp.Value =
-                GUILayout.Toggle(AutoPilotPlusPlugin.LocalWarp.Value, "Allow warp within the current system");
+                UIUtil.Toggle(AutoPilotPlusPlugin.LocalWarp.Value, "Allow warp within the current system");
             GUILayout.Label($"Min warp range: {AutoPilotPlusPlugin.WarpMinRangeAU.Value} AU");
             AutoPilotPlusPlugin.WarpMinRangeAU.Value =
                 Mathf.RoundToInt(GUILayout.HorizontalSlider(AutoPilotPlusPlugin.WarpMinRangeAU.Value, 1, 60));
@@ -86,14 +86,14 @@ namespace AutoPilotPlus.UI
             GUILayout.Space(4);
             GUILayout.Label("UI", DspSkin.Header);
             AutoPilotPlusPlugin.HidePanelWhenNotInSpace.Value =
-                GUILayout.Toggle(AutoPilotPlusPlugin.HidePanelWhenNotInSpace.Value, "Hide panel when not in space");
+                UIUtil.Toggle(AutoPilotPlusPlugin.HidePanelWhenNotInSpace.Value, "Hide panel when not in space");
 
             GUILayout.Space(4);
             GUILayout.Label("Debug", DspSkin.Header);
             AutoPilotPlusPlugin.DebugLog.Value =
-                GUILayout.Toggle(AutoPilotPlusPlugin.DebugLog.Value, "Verbose debug logging");
+                UIUtil.Toggle(AutoPilotPlusPlugin.DebugLog.Value, "Verbose debug logging");
             AutoPilotPlusPlugin.DebugWindow.Value =
-                GUILayout.Toggle(AutoPilotPlusPlugin.DebugWindow.Value, "Show debug overlay");
+                UIUtil.Toggle(AutoPilotPlusPlugin.DebugWindow.Value, "Show debug overlay");
 
             GUILayout.EndVertical();
             UIUtil.DragBar(Rect);

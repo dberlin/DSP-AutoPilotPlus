@@ -16,7 +16,7 @@ namespace AutoPilotPlus
     {
         public const string Guid = "com.livinginstinkt.dsp.autopilotplus";
         public const string Name = "AutoPilotPlus";
-        public const string Version = "0.3.2";
+        public const string Version = "0.3.3";
 
         internal static ManualLogSource Log;
         internal static AutoPilotPlusPlugin Instance;
