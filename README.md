@@ -44,9 +44,14 @@ Fresh rebuild of the original **AutoPilot** (tanu, continued by appuns) for curr
 ## Controls
 
 The **AutoPilot+** window shows state, energy, speed, warper and the last warp decision, with
-On/Off, Arm/Disarm and quick toggles. A **Config** button opens the full settings window (automation,
-warp, flight energy/speed, space altitude, UI and debug). Movement state, altitude and horizontal speed
-are shown in the CruiseAssist+ debug overlay.
+On/Off, Arm/Disarm and quick toggles. Its title bar carries **–** (collapse), **⚙** (full settings:
+automation, warp, flight energy/speed, space altitude, UI and debug) and **✕** (close — reopen from the
+CruiseAssist+ HUD). Movement state, altitude and horizontal speed are shown in the CruiseAssist+ debug
+overlay.
+
+Both windows are drawn in CruiseAssist+'s game-style skin, and clicks on them stop at the window instead
+of also reaching a building, the camera or a DSP panel behind — see `UI/BlockClickThrough` in
+CruiseAssist+'s config.
 
 ## Bugs, feature requests & discussion
 

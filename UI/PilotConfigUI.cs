@@ -25,25 +25,20 @@ namespace AutoPilotPlus.UI
         {
             if (!Visible) return;
             Rect = GUILayout.Window(WinId, Rect, Draw, "AutoPilot+ Config");
-            UIUtil.ClampToScreen(ref Rect);
+            UIUtil.Settle(ref Rect);
             if (_left != null) { _left.Value = Rect.x; _top.Value = Rect.y; }
         }
 
         private static void Draw(int id)
         {
-            var P = typeof(AutoPilotPlusPlugin);
+            if (UIUtil.TitleButton(Rect, 0, "✕")) Visible = false;
             GUILayout.BeginVertical();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("✕", GUILayout.Width(26))) Visible = false;
-            GUILayout.EndHorizontal();
 
             AutoPilotPlusPlugin.MasterEnabled.Value =
                 GUILayout.Toggle(AutoPilotPlusPlugin.MasterEnabled.Value, "Enabled (master)");
 
             GUILayout.Space(4);
-            GUILayout.Label("Automation", Bold());
+            GUILayout.Label("Automation", DspSkin.Header);
             AutoPilotPlusPlugin.AutoStart.Value =
                 GUILayout.Toggle(AutoPilotPlusPlugin.AutoStart.Value, "Auto-arm on target select");
             AutoPilotPlusPlugin.AutoLaunch.Value =
@@ -54,7 +49,7 @@ namespace AutoPilotPlus.UI
                 GUILayout.Toggle(AutoPilotPlusPlugin.IgnoreGravity.Value, "Ignore gravity while automating");
 
             GUILayout.Space(4);
-            GUILayout.Label("Warp", Bold());
+            GUILayout.Label("Warp", DspSkin.Header);
             AutoPilotPlusPlugin.LocalWarp.Value =
                 GUILayout.Toggle(AutoPilotPlusPlugin.LocalWarp.Value, "Allow warp within the current system");
             GUILayout.Label($"Min warp range: {AutoPilotPlusPlugin.WarpMinRangeAU.Value} AU");
@@ -65,7 +60,7 @@ namespace AutoPilotPlus.UI
                 Mathf.RoundToInt(GUILayout.HorizontalSlider(AutoPilotPlusPlugin.SpeedToWarp.Value, 100, 5000) / 50f) * 50;
 
             GUILayout.Space(4);
-            GUILayout.Label("Flight", Bold());
+            GUILayout.Label("Flight", DspSkin.Header);
             GUILayout.Label($"Min core energy to boost: {AutoPilotPlusPlugin.MinEnergyPer.Value}%");
             AutoPilotPlusPlugin.MinEnergyPer.Value =
                 Mathf.RoundToInt(GUILayout.HorizontalSlider(AutoPilotPlusPlugin.MinEnergyPer.Value, 0, 100));
@@ -89,21 +84,20 @@ namespace AutoPilotPlus.UI
                 Mathf.Round(GUILayout.HorizontalSlider(AutoPilotPlusPlugin.OrbitAltitude.Value, 600f, 20000f) / 100f) * 100f;
 
             GUILayout.Space(4);
-            GUILayout.Label("UI", Bold());
+            GUILayout.Label("UI", DspSkin.Header);
             AutoPilotPlusPlugin.HidePanelWhenNotInSpace.Value =
                 GUILayout.Toggle(AutoPilotPlusPlugin.HidePanelWhenNotInSpace.Value, "Hide panel when not in space");
 
             GUILayout.Space(4);
-            GUILayout.Label("Debug", Bold());
+            GUILayout.Label("Debug", DspSkin.Header);
             AutoPilotPlusPlugin.DebugLog.Value =
                 GUILayout.Toggle(AutoPilotPlusPlugin.DebugLog.Value, "Verbose debug logging");
             AutoPilotPlusPlugin.DebugWindow.Value =
                 GUILayout.Toggle(AutoPilotPlusPlugin.DebugWindow.Value, "Show debug overlay");
 
             GUILayout.EndVertical();
-            GUI.DragWindow();
+            UIUtil.DragBar(Rect);
         }
 
-        private static GUIStyle Bold() => new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold };
     }
 }

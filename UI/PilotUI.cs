@@ -33,34 +33,36 @@ namespace AutoPilotPlus.UI
             if (!Visible) return;
             if (AutoPilotPlusPlugin.HidePanelWhenNotInSpace.Value && !CruiseAssistPlusPlugin.InSpace) return;
 
-            Rect.height = Collapsed ? 40 : 230;
+            // The window style reserves DspSkin.TitleH at the top for the title bar, so the content
+            // height is measured below it.
+            Rect.height = DspSkin.TitleH + (Collapsed ? 4f : 196f);
             Rect = GUILayout.Window(WinId, Rect, Draw, "AutoPilot+");
-            UIUtil.ClampToScreen(ref Rect); // never let a saved position / UI scale strand it off-screen
+            // Never let a saved position / UI scale strand it off-screen, and claim its area so clicks
+            // on it don't also land on the world behind.
+            UIUtil.Settle(ref Rect);
             if (_left != null) { _left.Value = Rect.x; _top.Value = Rect.y; _collapsed.Value = Collapsed; }
         }
 
-        private static void Header()
+        /// <summary>Collapse / config / close live in the title bar, matching CruiseAssist+ and DSP's own
+        /// panels. Drawn before the drag bar so they claim their own clicks.</summary>
+        private static void TitleBar()
         {
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button(Collapsed ? "+" : "–", GUILayout.Width(26))) Collapsed = !Collapsed;
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Config", GUILayout.Width(60))) PilotConfigUI.Visible = !PilotConfigUI.Visible;
-            if (GUILayout.Button("✕", GUILayout.Width(26))) Visible = false;
-            GUILayout.EndHorizontal();
+            if (UIUtil.TitleButton(Rect, 0, "✕")) Visible = false;
+            if (UIUtil.TitleButton(Rect, 1, "⚙")) PilotConfigUI.Visible = !PilotConfigUI.Visible;
+            if (UIUtil.TitleButton(Rect, 2, Collapsed ? "+" : "–")) Collapsed = !Collapsed;
         }
 
         private static void Draw(int id)
         {
+            TitleBar();   // absolute positioning: outside the layout flow, so it costs no content space
             GUILayout.BeginVertical();
-            Header();
 
             if (!Collapsed)
             {
                 bool armed = PilotExtension.State == PilotExtension.PState.Active;
 
-                var stateStyle = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold };
-                stateStyle.normal.textColor = armed ? Color.green : Color.gray;
-                GUILayout.Label(armed ? "● ARMED" : "○ Inactive", stateStyle);
+                GUILayout.Label(armed ? "● ARMED" : "○ Inactive",
+                    DspSkin.Tinted(DspSkin.Status, armed ? DspSkin.Ok : DspSkin.InkDim));
 
                 if (!string.IsNullOrEmpty(PilotExtension.LaunchStatus))
                     GUILayout.Label($"Status: {PilotExtension.LaunchStatus}");
@@ -81,7 +83,7 @@ namespace AutoPilotPlus.UI
             }
 
             GUILayout.EndVertical();
-            GUI.DragWindow();
+            UIUtil.DragBar(Rect);
         }
     }
 }

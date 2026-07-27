@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "LivingInstinkt"
 name = "AutoPilotPlus"
-versionNumber = "0.3.1"
+versionNumber = "0.3.2"
 description = "Full flight automation for DSP: auto ground-launch, boost, warp (incl. to Dark Fog hives/seeds) and landing. Extension for CruiseAssistPlus. Rebuild of tanu/appuns AutoPilot."
 websiteUrl = "https://github.com/Living-Instinkt/DSP-AutoPilotPlus"
 containsNsfwContent = false

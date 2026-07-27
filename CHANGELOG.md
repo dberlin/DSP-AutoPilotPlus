@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.2
+- **Clicks no longer pass through the AutoPilot+ windows** onto a building, the terrain, the camera or a
+  DSP panel behind them. Both windows register the area they cover with CruiseAssist+'s click blocker,
+  which raises the game's own "cursor is on the interface" state while you're over one.
+- Both windows pick up CruiseAssist+'s new **game-style skin and font**, and collapse / config / close
+  moved into the AutoPilot+ title bar (**–**, **⚙**, **✕**), freeing the row they used to take.
+- Requires CruiseAssistPlus 0.3.5.
+
 ## 0.3.1
 - The AutoPilot+ window (and its config window) now clamp on-screen, so a saved position combined with a
   higher CruiseAssist+ UI scale can no longer strand the window off the edge where it couldn't be opened.
