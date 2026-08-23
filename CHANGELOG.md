@@ -13,9 +13,26 @@
 - **The Fly -> Sail hand-off no longer flaps.** It promoted at 49 m rather than 45 m. The game demotes
   Sail -> Fly again below 46 m at low speed, so the old threshold entered sail mode inside the window the
   game immediately reverses, and the two states fought each other. 49 m is the game's own altitude gate.
-- The near-planet approach and the auto-land descent are corrected by the same change. They shared the
-  reference-frame error, which left the mecha carrying the planet's orbital velocity as an apparent
-  few-hundred-m/s drift, so the "slow enough to hand control back to the game" check could never pass.
+- **Auto-land works at all.** It had never run once. The game publishes the destination as the "local planet"
+  at 900 m above the surface, CruiseAssist+ reads that as arrival and clears the target, and clearing the
+  target stands the autopilot down — before the descent code is ever called. The mecha was simply abandoned
+  in sail mode 900 m up. The target is now held through the descent, the same way launch-to-orbit already
+  held it, and AutoPilot+ releases it once the mecha is low and slow enough for the game's own landing to
+  finish. The panel shows "landing… (alt N m)" on the way down. The reference-frame fix above matters here
+  too: without it the descent carried the planet's orbital velocity as an apparent drift, so the hand-off
+  could never have triggered even once it was reachable.
+- **The descent is flown all the way to the ground.** Handing back in mid-air was a coin flip: the game
+  drops Sail -> Fly anywhere between 46 m and 7 m depending on how fast you are still moving, and parks the
+  mecha at whatever altitude that happened to be — it only continues down to a landing from under 14.5 m.
+  So the same approach would touch down one time and stop dead a few metres up the next. AutoPilot+ now
+  holds the target through the Fly phase and drives the altitude down itself, releasing on touchdown.
+- Selecting the planet directly below you while airborne now lands on it. It used to arm a launch-to-orbit
+  (the check treated flying as standing on the ground) which nothing could then execute, so the mecha dipped
+  and hung there.
+- Boost is cut the moment the destination planet loads. It appears at 900 m while `SpaceAltitude` is 600, so
+  the arrival tick still counted as "in space" and re-lit the boost for the last stretch of the descent.
+- Standing the autopilot down by hand now hands the target back to CruiseAssist+, and switching auto-land off
+  mid-flight releases on arrival instead of circling the planet.
 - **`IgnoreGravity` no longer fights the launch.** It is a sail-only setting now, which is the only place it
   ever worked: the game applies ground gravity before mods get a look in, so on the ground it managed only
   to strip the gravity compensation out of the thruster force and let the climb sag short of its target.

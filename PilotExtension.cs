@@ -28,15 +28,21 @@ namespace AutoPilotPlus
             AutoPilotPlusPlugin.MasterEnabled.Value &&
             State == PState.Active;
 
-        // Check the SELECTION (set the instant you pick a target, available on the ground) as well as the
-        // resolved target (only populated during the Sail tick). Using only the resolved target meant
-        // HasTarget was false on the ground, so ground-launch never armed.
-        private static bool HasTarget =>
+        /// <summary>What the player has actually picked. This is the only target state that is trustworthy
+        /// off the Sail tick: CruiseAssist resolves Target* inside CruiseTick, which returns early unless
+        /// the mecha is sailing, and ClearSelection does not reset them. So once we're on the ground they
+        /// hold whatever the last sail tick left behind, indefinitely.</summary>
+        private static bool HasSelection =>
             CruiseAssistPlusPlugin.SelectTargetStar != null ||
             CruiseAssistPlusPlugin.SelectTargetPlanet != null ||
             CruiseAssistPlusPlugin.SelectTargetHive != null ||
             CruiseAssistPlusPlugin.SelectTargetEnemyId != 0 ||
-            CruiseAssistPlusPlugin.SelectTargetMsgId != 0 ||
+            CruiseAssistPlusPlugin.SelectTargetMsgId != 0;
+
+        // The selection plus CruiseAssist's resolved target. Only meaningful while sailing, where the
+        // resolved half is refreshed every tick — see HasSelection for why it is wrong anywhere else.
+        private static bool HasTarget =>
+            HasSelection ||
             CruiseAssistPlusPlugin.TargetStar != null ||
             CruiseAssistPlusPlugin.TargetPlanet != null ||
             CruiseAssistPlusPlugin.TargetKind == NavTargetKind.Hive ||
@@ -70,11 +76,15 @@ namespace AutoPilotPlus
                 // Never applies to Dark Fog targets.
                 var lp = GameMain.localPlanet;
                 var player = GameMain.mainPlayer;
+                // Only from the ground. player.sailing is movementState >= Sail, so it reads Fly and Drift
+                // as "standing on the planet" — picking the planet below you while hovering armed an orbit
+                // launch that only OperateSail can run, and nothing happened. Airborne over the target
+                // planet means land, not climb.
                 bool onThisPlanet = !dfSelection && lp != null && CruiseAssistPlusPlugin.SelectTargetPlanet != null &&
                                     CruiseAssistPlusPlugin.SelectTargetPlanet.id == lp.id &&
-                                    (player == null || !player.sailing);
+                                    (player == null || player.movementState == EMovementState.Walk);
                 _orbitLaunch = onThisPlanet;
-                CruiseAssistPlusPlugin.SuppressAutoArrival = onThisPlanet;
+                CruiseAssistPlusPlugin.SuppressAutoArrival = onThisPlanet || WantAutoLand();
             }
             AutoPilotPlusPlugin.Dbg($"target changed astroId={astroId} -> state={State} orbitLaunch={_orbitLaunch}");
         }
@@ -88,7 +98,46 @@ namespace AutoPilotPlus
         public static void ToggleArmed()
         {
             State = State == PState.Active ? PState.Inactive : PState.Active;
-            if (State == PState.Inactive) InputSailSpeedUp = false;
+            if (State == PState.Inactive)
+            {
+                // Standing down by hand hands the target back too, so CruiseAssist resumes its own
+                // arrival behaviour instead of holding a target nobody is going to land.
+                InputSailSpeedUp = false;
+                CruiseAssistPlusPlugin.SuppressAutoArrival = _orbitLaunch;
+            }
+            else
+            {
+                CruiseAssistPlusPlugin.SuppressAutoArrival = _orbitLaunch || WantAutoLand();
+            }
+        }
+
+        /// <summary>True when we mean to fly the descent ourselves, which requires CruiseAssist to NOT
+        /// treat the destination planet loading as an arrival.
+        ///
+        /// GameData.GetNearestStarPlanet publishes GameMain.localPlanet once the mecha is within 900 m of
+        /// the surface. CruiseAssist reads that as "arrived at the planet goal", clears the selection and
+        /// calls SetInactive on us — before CruiseTick ever reaches OperateSail. So the autopilot used to
+        /// disarm 900 m up and simply abandon the mecha in sail mode, and because TargetPlanet is assigned
+        /// only past that early return, ApproachOrDepart's destinationHere could never be true and the whole
+        /// auto-land path was unreachable. Suppressing the clear makes it our job to release the target,
+        /// which ReleaseTarget does once the descent is handed over.</summary>
+        private static bool WantAutoLand() =>
+            AutoPilotPlusPlugin.AutoLand != null &&
+            AutoPilotPlusPlugin.AutoLand.Value &&
+            CruiseAssistPlusPlugin.SelectTargetPlanet != null &&
+            CruiseAssistPlusPlugin.SelectTargetKind == NavTargetKind.Astro;
+
+        /// <summary>True while an auto-land onto the planet we are currently over is in progress — from the
+        /// sail descent right through to touchdown. Reads the SELECTION rather than CruiseAssist's resolved
+        /// TargetPlanet, because that one is only refreshed during the Sail tick and this has to mean
+        /// something in Fly and Walk too.</summary>
+        private static bool LandingHere()
+        {
+            if (!Armed || _orbitLaunch) return false;
+            if (AutoPilotPlusPlugin.AutoLand == null || !AutoPilotPlusPlugin.AutoLand.Value) return false;
+            var lp = GameMain.localPlanet;
+            return lp != null && CruiseAssistPlusPlugin.SelectTargetPlanet != null &&
+                   CruiseAssistPlusPlugin.SelectTargetPlanet.id == lp.id;
         }
 
         // ---------------- take-off (ground launch: Walk -> Fly -> Sail) ----------------
@@ -102,6 +151,17 @@ namespace AutoPilotPlus
             // otherwise e.g. OperateFly runs while sailing and its ResetSailState() wipes our cruise velocity
             // every frame ("nothing holds W"; travels fine only with AutoPilot off).
             if (m.player == null || m.player.movementState != EMovementState.Walk) return false;
+
+            // Touchdown. We asked CruiseAssist to hold the target through the whole descent, so giving it
+            // back is our job and this is the moment: we're standing on the planet we were aiming at.
+            if (LandingHere())
+            {
+                AutoPilotPlusPlugin.Dbg("auto-land: touchdown -> release");
+                LaunchStatus = "landed";
+                ReleaseTarget();
+                return false;
+            }
+
             if (!LaunchAllowed(m.player)) return false;
             ArmForLaunch();
             InputSailSpeedUp = false;
@@ -121,6 +181,7 @@ namespace AutoPilotPlus
         public bool OperateDrift(PlayerMove_Drift m)
         {
             if (m.player == null || m.player.movementState != EMovementState.Drift) return false;
+
             if (!LaunchAllowed(m.player)) return false;
             ArmForLaunch();
             InputSailSpeedUp = false;
@@ -144,11 +205,26 @@ namespace AutoPilotPlus
             // Gate on the real state: Fly.GameTick is ticked every frame even while sailing, and our
             // ResetSailState() below would otherwise wipe the sail velocity every frame (see OperateWalk).
             if (m.player == null || m.player.movementState != EMovementState.Fly) return false;
+            // Fly the last stretch of an auto-land ourselves. PlayerMove_Sail drops Sail->Fly somewhere
+            // between 46 m and 7 m depending on how fast the mecha is still moving, and pins
+            // actionFly.targetAltitude to whatever altitude it demoted at. PlayerMove_Fly only continues to
+            // the ground when that value is under 14.5 — above it the mecha just hovers where it is. Letting
+            // go in sail therefore landed or hung at random. Hold the target altitude down instead and let
+            // the game's own Fly->Walk sequence finish; OperateWalk releases the target on touchdown.
+            if (LandingHere())
+            {
+                InputSailSpeedUp = false;
+                m.targetAltitude = 1f;
+                LaunchStatus = $"landing… (alt {m.currentAltitude:0} m)";
+                if (GameMain.gameTick % 30 == 0)
+                    AutoPilotPlusPlugin.Dbg($"auto-land (fly) alt={m.currentAltitude:0} vert={m.controller.vertSpeed:0.0}");
+                return true;
+            }
+
             // A target is enough to start climbing, whatever got us airborne. This used to also require a
             // "Launching" flag that only OperateWalk and OperateDrift ever set, so picking a target while
-            // already hovering left the mecha hanging there indefinitely. The flag was there to stop us
-            // fighting the game's landing descent (it drops Sail->Fly near the surface), but by then
-            // CruiseAssist has cleared the target, so LaunchAllowed is false and we stand down anyway.
+            // already hovering left the mecha hanging there indefinitely. A descent cannot reach this line:
+            // LandingHere() returns above whenever the target is the planet underneath us.
             if (!LaunchAllowed(m.player)) return false;
             ArmForLaunch();
             InputSailSpeedUp = false;
@@ -199,11 +275,14 @@ namespace AutoPilotPlus
 
         // Launch is allowed when the mod is enabled, auto-launch is on, and a target is selected — it does
         // NOT require the separate "armed" toggle (selecting a planet from the ground should just launch).
+        // Gates on the SELECTION, not HasTarget: this runs from Walk/Drift/Fly, where CruiseAssist's
+        // resolved TargetPlanet is stale. Landing cleared the selection but left that field pointing at the
+        // planet we had just touched down on, so the launch re-armed itself and took straight back off.
         private static bool LaunchAllowed(Player player) =>
             player != null &&
             AutoPilotPlusPlugin.MasterEnabled.Value &&
             AutoPilotPlusPlugin.AutoLaunch.Value &&
-            HasTarget;
+            HasSelection;
 
         private static void ArmForLaunch()
         {
@@ -536,6 +615,29 @@ namespace AutoPilotPlus
             float cap = AutoPilotPlusPlugin.ApproachSpeedCap.Value;
             float clearance = AutoPilotPlusPlugin.MinClearance.Value;
 
+            // Is this planet the destination? Only meaningful now that we suppress CruiseAssist's arrival
+            // clear (see WantAutoLand) — TargetPlanet is assigned on the far side of that clear, so this
+            // used to be permanently false and everything below it was unreachable.
+            bool destinationHere = CruiseAssistPlusPlugin.TargetPlanet != null &&
+                                   CruiseAssistPlusPlugin.TargetPlanet.id == localPlanet.id;
+
+            if (destinationHere)
+            {
+                // We're inside the planet's own space; never boost here, whatever the cruise leg decided.
+                // localPlanet appears at ~900 m but SpaceAltitude is 600, so the tick we arrive still
+                // counts as "in space" and would otherwise light the boost on the way down.
+                InputSailSpeedUp = false;
+
+                if (!AutoPilotPlusPlugin.AutoLand.Value)
+                {
+                    // Auto-land was switched off after we asked CruiseAssist to hold the target. Give it
+                    // straight back rather than circling the planet forever.
+                    AutoPilotPlusPlugin.Dbg("arrived, auto-land off -> release");
+                    ReleaseTarget();
+                    return false;
+                }
+            }
+
             // Already fast and well clear of the planet: steer straight at the target ourselves.
             if (Speed > cap && altitude > Math.Max(localPlanet.realRadius, clearance))
             {
@@ -554,16 +656,21 @@ namespace AutoPilotPlus
             double speedCap = Math.Min(Speed, cap);
 
             // Auto-land: destination is this planet -> bleed speed as altitude drops, then release.
-            bool destinationHere = CruiseAssistPlusPlugin.TargetPlanet != null &&
-                                   CruiseAssistPlusPlugin.TargetPlanet.id == localPlanet.id;
-            if (destinationHere && AutoPilotPlusPlugin.AutoLand.Value)
+            if (destinationHere)
             {
-                InputSailSpeedUp = false;
                 speedCap = Mathf.Clamp((float)altitude, 8f, cap);
+                LaunchStatus = $"landing… ({altitude:0} m)";
+                if (GameMain.gameTick % 30 == 0)
+                    AutoPilotPlusPlugin.Dbg($"auto-land alt={altitude:0} speed={Speed:0} cap={speedCap:0}");
                 if (altitude < clearance * 0.25 && Speed < 20)
                 {
-                    AutoPilotPlusPlugin.Dbg("auto-land: releasing control to game");
-                    return false; // let the game's own landing take over
+                    // Low and slow: stop steering so the game demotes us to Fly. We deliberately hold on to
+                    // the target — OperateFly flies the rest down and OperateWalk releases on touchdown,
+                    // because the altitude the game happens to demote at otherwise decides between landing
+                    // and hovering (see the comment in OperateFly).
+                    if (GameMain.gameTick % 30 == 0)
+                        AutoPilotPlusPlugin.Dbg($"auto-land: handing to Fly (alt={altitude:0} speed={Speed:0})");
+                    return false;
                 }
             }
 
@@ -579,6 +686,15 @@ namespace AutoPilotPlus
             VectorLF3 steered = Vector3.Slerp(relVelocity, steer.normalized * speedCap, t);
             player.uVelocity = steered + frameVel;
             return true;
+        }
+
+        /// <summary>Hand the target back to CruiseAssist: lift the arrival suppression we asked for and
+        /// clear the selection, which disarms us through SetInactive.</summary>
+        private static void ReleaseTarget()
+        {
+            InputSailSpeedUp = false;
+            CruiseAssistPlusPlugin.SuppressAutoArrival = false;
+            CruiseAssistPlusPlugin.ClearSelection();
         }
 
         // ---------------- GUI ----------------
