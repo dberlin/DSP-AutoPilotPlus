@@ -5,3 +5,4 @@ dist/
 .vs/
 Directory.Build.props
 .serena/
+.DS_Store
