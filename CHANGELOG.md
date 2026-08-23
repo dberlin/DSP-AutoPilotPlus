@@ -25,6 +25,8 @@
   on its own take-off; launching mid-build used to carry the command into flight.
 - Warp honours the mecha's auto-replenish warper setting, as the game does. With an empty warper slot the
   panel used to read "no warper" indefinitely even though warping by hand worked.
+- **Picking a target while already hovering now launches.** Take-off only started if the mecha was walking
+  or drifting when you chose the destination; select one while airborne on thrusters and it just hung there.
 
 ## 0.3.4
 - **Clicks no longer pass through the AutoPilot+ windows** onto a building, the terrain, the camera or a

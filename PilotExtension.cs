@@ -43,10 +43,6 @@ namespace AutoPilotPlus
             CruiseAssistPlusPlugin.TargetKind == NavTargetKind.Enemy ||
             CruiseAssistPlusPlugin.TargetKind == NavTargetKind.Message;
 
-        /// <summary>True while an active ground-launch is in progress (Walk/Drift/Fly climbing to space).
-        /// Prevents OperateFly from fighting the game's landing descent (Sail-&gt;Fly near the surface).</summary>
-        public static bool Launching;
-
         // ---------------- lifecycle ----------------
 
         /// <summary>True while we're launching to orbit around the very planet the mecha is standing on
@@ -85,7 +81,7 @@ namespace AutoPilotPlus
 
         public void SetInactive()
         {
-            State = PState.Inactive; InputSailSpeedUp = false; Launching = false;
+            State = PState.Inactive; InputSailSpeedUp = false;
             _orbitLaunch = false; CruiseAssistPlusPlugin.SuppressAutoArrival = false;
         }
 
@@ -116,7 +112,6 @@ namespace AutoPilotPlus
                     AutoPilotPlusPlugin.Dbg($"launch blocked: thrusterLevel={(m.mecha != null ? m.mecha.thrusterLevel : -1)}");
                 return false;
             }
-            Launching = true;
             LaunchStatus = "launching…";
             if (GameMain.gameTick % 30 == 0) AutoPilotPlusPlugin.Dbg("launch: Walk -> SwitchToFly");
             m.SwitchToFly();   // Walk -> Fly (requires thrusterLevel >= 1)
@@ -130,7 +125,7 @@ namespace AutoPilotPlus
             ArmForLaunch();
             InputSailSpeedUp = false;
             // Same gate as OperateWalk: PlayerMove_Drift.SwitchToFly silently does nothing below
-            // thrusterLevel 1, so without this we'd latch Launching and report "launching…" forever
+            // thrusterLevel 1, so without this we'd report "launching…" forever
             // while the mecha just sat there.
             if (m.mecha == null || m.mecha.thrusterLevel < 1)
             {
@@ -139,7 +134,6 @@ namespace AutoPilotPlus
                     AutoPilotPlusPlugin.Dbg($"launch blocked: thrusterLevel={(m.mecha != null ? m.mecha.thrusterLevel : -1)}");
                 return false;
             }
-            Launching = true;
             m.controller.input0.z = 1f;   // jump edge -> PlayerMove_Drift.UpdateJump promotes Drift -> Fly
             LaunchStatus = "launching…";
             return true;
@@ -150,9 +144,12 @@ namespace AutoPilotPlus
             // Gate on the real state: Fly.GameTick is ticked every frame even while sailing, and our
             // ResetSailState() below would otherwise wipe the sail velocity every frame (see OperateWalk).
             if (m.player == null || m.player.movementState != EMovementState.Fly) return false;
-            // Only drive a climb when we're actually launching from the ground. During landing the game
-            // switches Sail->Fly near the surface; pushing up there would fight the descent.
-            if (!Launching || !LaunchAllowed(m.player)) return false;
+            // A target is enough to start climbing, whatever got us airborne. This used to also require a
+            // "Launching" flag that only OperateWalk and OperateDrift ever set, so picking a target while
+            // already hovering left the mecha hanging there indefinitely. The flag was there to stop us
+            // fighting the game's landing descent (it drops Sail->Fly near the surface), but by then
+            // CruiseAssist has cleared the target, so LaunchAllowed is false and we stand down anyway.
+            if (!LaunchAllowed(m.player)) return false;
             ArmForLaunch();
             InputSailSpeedUp = false;
 
@@ -245,7 +242,7 @@ namespace AutoPilotPlus
             if (!Armed) { InputSailSpeedUp = false; return false; }
             var player = move.player;
             var mecha = move.mecha ?? player?.mecha;
-            if (player == null || mecha == null) { Launching = false; return false; }
+            if (player == null || mecha == null) return false;
             // Sail.GameTick is ticked every frame even while walking/flying — only act when actually sailing,
             // else we'd fight the ground-launch (setting boost/velocity) before the mecha is even airborne.
             if (!player.sailing) return false;
@@ -254,8 +251,8 @@ namespace AutoPilotPlus
             Speed = move.visual_uvel.magnitude;
             HasWarper = mecha.HasWarper();
 
-            if (player.warping) { Launching = false; return false; } // game drives heading during warp
-            if (!HasTarget) { InputSailSpeedUp = false; Launching = false; return false; }
+            if (player.warping) return false; // game drives heading during warp
+            if (!HasTarget) { InputSailSpeedUp = false; return false; }
 
             ZeroGravity(player.controller);
 
@@ -280,12 +277,9 @@ namespace AutoPilotPlus
                                        CruiseAssistPlusPlugin.TargetPlanet.id == localPlanet.id;
                 if (!destinationHere)
                 {
-                    Launching = true; // keep re-climbing if the game briefly bounces us back to Fly
                     return ClimbToSpace(player, localPlanet, altitude);
                 }
             }
-
-            Launching = false; // in space (or landing on the destination) -> launch phase complete
 
             // Boost only once clear of the gravity well — thrusting low over a planet burns core energy
             // fighting gravity, which used to leave you stranded slow in space with an empty core.
@@ -410,7 +404,6 @@ namespace AutoPilotPlus
             bool reached = localPlanet == null || altitude >= AutoPilotPlusPlugin.OrbitAltitude.Value;
             if (!reached)
             {
-                Launching = true;
                 InputSailSpeedUp = false; // climb on thrust/steering alone, conserve core (as ClimbToSpace)
                 Vector3 outward = ((Vector3)(player.uPosition - localPlanet.uPosition)).normalized;
                 float cap = AutoPilotPlusPlugin.LaunchClimbSpeed.Value;
@@ -427,7 +420,6 @@ namespace AutoPilotPlus
             }
 
             // Reached orbit altitude: brake to a slow drift, then release + disarm so we hold in high orbit.
-            Launching = false;
             InputSailSpeedUp = false;
             double sp = ((VectorLF3)player.uVelocity).magnitude;
             if (sp > 20) player.uVelocity = (Vector3)player.uVelocity * (float)(20.0 / sp);
