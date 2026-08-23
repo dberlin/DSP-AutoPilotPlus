@@ -46,7 +46,6 @@ namespace AutoPilotPlus
         internal static ConfigEntry<float> ApproachTurnRate;
         internal static ConfigEntry<float> ApproachMinAngle;
         internal static ConfigEntry<float> UnitsPerAU;
-        internal static ConfigEntry<int> WarperItemId;
         internal static ConfigEntry<float> SpaceAltitude;
         internal static ConfigEntry<float> ApproachBrakeRange;
         internal static ConfigEntry<float> SeedBrakeRange;
@@ -54,7 +53,6 @@ namespace AutoPilotPlus
 
         // Debug
         internal static ConfigEntry<bool> DebugLog;
-        internal static ConfigEntry<bool> DebugWindow;
 
         private Harmony _harmony;
         private PilotExtension _extension;
@@ -102,7 +100,6 @@ namespace AutoPilotPlus
             ApproachTurnRate = Config.Bind("Tuning", "ApproachTurnRate", 1.6f, "Slerp numerator for approach steering.");
             ApproachMinAngle = Config.Bind("Tuning", "ApproachMinAngle", 10f, "Slerp angle floor for approach steering.");
             UnitsPerAU = Config.Bind("Tuning", "UnitsPerAU", 40000f, "Game units per AU (used for the warp distance check).");
-            WarperItemId = Config.Bind("Tuning", "WarperItemId", 1210, "Item id of the Space Warper.");
             SpaceAltitude = Config.Bind("Tuning", "SpaceAltitude", 600f,
                 "Altitude (m above surface) above which the mecha is considered 'in space' and may boost/thrust. Below this it coasts out on launch momentum to save energy.");
             ApproachBrakeRange = Config.Bind("Tuning", "ApproachBrakeRange", 6000f,
@@ -119,7 +116,6 @@ namespace AutoPilotPlus
                     new AcceptableValueRange<float>(600f, 20000f)));
 
             DebugLog = Config.Bind("Debug", "DebugLog", false, "Verbose per-tick autopilot logging (why warp did/didn't fire, etc).");
-            DebugWindow = Config.Bind("Debug", "DebugWindow", false, "Show the AutoPilot debug overlay.");
 
             UI.PilotUI.LoadFromConfig(Config);
 

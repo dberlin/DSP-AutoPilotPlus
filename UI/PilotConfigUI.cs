@@ -93,8 +93,6 @@ namespace AutoPilotPlus.UI
             GUILayout.Label("Debug", DspSkin.Header);
             AutoPilotPlusPlugin.DebugLog.Value =
                 UIUtil.Toggle(AutoPilotPlusPlugin.DebugLog.Value, "Verbose debug logging");
-            AutoPilotPlusPlugin.DebugWindow.Value =
-                UIUtil.Toggle(AutoPilotPlusPlugin.DebugWindow.Value, "Show debug overlay");
 
             GUILayout.EndVertical();
             UIUtil.DragBar(Rect);

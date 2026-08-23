@@ -45,6 +45,8 @@
 - **Picking a target while already hovering now launches.** Take-off only started if the mecha was walking
   or drifting when you chose the destination; select one while airborne on thrusters and it just hung there.
 
+- Removed the "Show debug overlay" toggle, which was wired to nothing, and the unused `WarperItemId` setting.
+
 ## 0.3.4
 - **Clicks no longer pass through the AutoPilot+ windows** onto a building, the terrain, the camera or a
   DSP panel behind them. Both windows register the area they cover with CruiseAssist+'s click blocker,
