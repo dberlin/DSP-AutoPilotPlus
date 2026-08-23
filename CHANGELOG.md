@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.3.5
+- **Ground launch works again.** Taking off from a planet did nothing useful: the mecha bobbed around the
+  surface and never reached space, so the mod only ever appeared to work if you engaged it while already
+  sailing. Below 600 m the game does not read `uVelocity` as an absolute universe velocity — it reads it as
+  velocity relative to the ground *plus* the ground's own motion, faded in over the 600 m -> 150 m band. The
+  climb-out set it absolutely, so what the game actually saw was the mecha keeping station with the star
+  while the planet orbited out from under it: a few hundred m/s of drift in a direction unrelated to "up",
+  which regularly pushed it back down through the altitude floor where the game drops Sail -> Fly. Climb-out,
+  launch-to-orbit, the approach and the auto-land descent now all convert into the planet's frame. Above
+  600 m nothing changes.
+- **The Fly -> Sail hand-off no longer flaps.** It promoted at 49 m rather than 45 m. The game demotes
+  Sail -> Fly again below 46 m at low speed, so the old threshold entered sail mode inside the window the
+  game immediately reverses, and the two states fought each other. 49 m is the game's own altitude gate.
+- The near-planet approach and the auto-land descent are corrected by the same change. They shared the
+  reference-frame error, which left the mecha carrying the planet's orbital velocity as an apparent
+  few-hundred-m/s drift, so the "slow enough to hand control back to the game" check could never pass.
+- **`IgnoreGravity` no longer fights the launch.** It is a sail-only setting now, which is the only place it
+  ever worked: the game applies ground gravity before mods get a look in, so on the ground it managed only
+  to strip the gravity compensation out of the thruster force and let the climb sag short of its target.
+- Launching from a drift now reports "need Thruster tech to launch" instead of claiming to launch forever —
+  the drift take-off silently does nothing without the tech, same as walking.
+- An in-progress build command is cleared when the autopilot enters sail mode, matching what the game does
+  on its own take-off; launching mid-build used to carry the command into flight.
+- Warp honours the mecha's auto-replenish warper setting, as the game does. With an empty warper slot the
+  panel used to read "no warper" indefinitely even though warping by hand worked.
+
 ## 0.3.4
 - **Clicks no longer pass through the AutoPilot+ windows** onto a building, the terrain, the camera or a
   DSP panel behind them. Both windows register the area they cover with CruiseAssist+'s click blocker,

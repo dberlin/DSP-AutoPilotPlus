@@ -108,7 +108,6 @@ namespace AutoPilotPlus
             if (m.player == null || m.player.movementState != EMovementState.Walk) return false;
             if (!LaunchAllowed(m.player)) return false;
             ArmForLaunch();
-            ZeroGravity(m.controller);
             InputSailSpeedUp = false;
             if (m.mecha == null || m.mecha.thrusterLevel < 1)
             {
@@ -129,10 +128,19 @@ namespace AutoPilotPlus
             if (m.player == null || m.player.movementState != EMovementState.Drift) return false;
             if (!LaunchAllowed(m.player)) return false;
             ArmForLaunch();
-            ZeroGravity(m.controller);
             InputSailSpeedUp = false;
+            // Same gate as OperateWalk: PlayerMove_Drift.SwitchToFly silently does nothing below
+            // thrusterLevel 1, so without this we'd latch Launching and report "launching…" forever
+            // while the mecha just sat there.
+            if (m.mecha == null || m.mecha.thrusterLevel < 1)
+            {
+                LaunchStatus = "need Thruster tech to launch";
+                if (GameMain.gameTick % 30 == 0)
+                    AutoPilotPlusPlugin.Dbg($"launch blocked: thrusterLevel={(m.mecha != null ? m.mecha.thrusterLevel : -1)}");
+                return false;
+            }
             Launching = true;
-            m.controller.input0.z = 1f;   // jump edge -> game promotes Drift -> Fly
+            m.controller.input0.z = 1f;   // jump edge -> PlayerMove_Drift.UpdateJump promotes Drift -> Fly
             LaunchStatus = "launching…";
             return true;
         }
@@ -146,14 +154,14 @@ namespace AutoPilotPlus
             // switches Sail->Fly near the surface; pushing up there would fight the descent.
             if (!Launching || !LaunchAllowed(m.player)) return false;
             ArmForLaunch();
-            ZeroGravity(m.controller);
             InputSailSpeedUp = false;
 
-            // The game's OWN navigation auto-fly (navigation.navigating) is switched on the instant a target
-            // is selected (we set navigation.indicatorAstroId). While it's on, PlayerMove_Fly.GameTick zeroes
-            // BOTH our horizontal input (so horzSpeed never reaches the 12.5 needed to promote Fly->Sail) AND
-            // our vertical thrust (so targetAltitude decays and the mecha sinks back to Walk). Suppress it for
-            // this tick so our climb inputs actually drive the launch.
+            // Stand the game's own auto-fly down for this tick. It is NOT switched on by picking a
+            // CruiseAssist target — PlayerNavigation.indicatorAstroId's setter only touches the indicator
+            // fields, and `navigating` is set solely by PlayerNavigation.Start(). But if the player did
+            // order a navigate-to, PlayerMove_Fly.GameTick would zero BOTH our horizontal input (so
+            // horzSpeed never reaches the 12.5 the vanilla Fly->Sail gate wants) AND our vertical thrust
+            // (so targetAltitude decays and the mecha sinks back to Walk), which would stall the launch.
             if (m.navigation != null) m.navigation.navigating = false;
 
             // Drive climb + horizontal run-up. Pushing targetAltitude past 50 is REQUIRED: the game only
@@ -170,9 +178,19 @@ namespace AutoPilotPlus
 
             // Hand-promote once we've cleared the climb. We do this ourselves (rather than relying on the
             // game's horzSpeed>12.5 gate, which a low walk-speed mecha may never reach) using the game's full
-            // transition sequence. currentAltitude can't exceed ~50 m (targetAltitude cap), so key off 45 m.
-            if (m.currentAltitude > 45f && m.mecha != null && m.mecha.thrusterLevel >= 2)
+            // transition sequence, but we keep the game's OWN altitude gate of 49 m. That number is not
+            // arbitrary: PlayerMove_Sail.GameTick drops Sail->Fly again whenever altitude < 46 m at low
+            // speed, so promoting at 45 m handed the mecha straight back to Fly and flapped between the two
+            // states forever. currentAltitude converges on the 50 m targetAltitude cap, so 49 is reachable.
+            if (m.currentAltitude > 49f && m.mecha != null && m.mecha.thrusterLevel >= 2)
             {
+                // The game clears an in-flight build command before entering Sail; we were skipping this
+                // step, so launching mid-build carried a live build command into sail mode.
+                if (m.controller.cmd.type == ECommand.Build)
+                {
+                    m.controller.cmd.SetNoneCommand();
+                    m.controller.actionBuild.blueprintMode = EBlueprintMode.None;
+                }
                 m.controller.movementStateInFrame = EMovementState.Sail;
                 m.controller.actionSail.ResetSailState();
                 GameCamera.instance.SyncForSailMode();
@@ -199,6 +217,18 @@ namespace AutoPilotPlus
             }
         }
 
+        /// <summary>Cancel the gravity pull while sailing. SAIL ONLY, deliberately.
+        ///
+        /// PlayerController.GameTick runs ApplyGravity() — which both fills in universalGravity/localGravity
+        /// AND does the AddLocalForce(localGravity) — *before* it ticks the movement actions, so a prefix
+        /// zeroing those fields is already too late to cancel anything on the ground. All it achieved in
+        /// Walk/Drift/Fly was to strip the `+ universalGravity.magnitude` gravity-compensation term out of
+        /// PlayerMove_Fly's thruster force, making the launch climb sag below its target altitude — the
+        /// exact opposite of the "cleaner take-off" it was meant to give.
+        ///
+        /// Sail is different: ApplyGravity skips AddLocalForce while sailing, and PlayerMove_Sail.GameTick
+        /// reads controller.universalGravity into uForce itself — after our prefix — so zeroing it there
+        /// really does remove the pull.</summary>
         private static void ZeroGravity(PlayerController controller)
         {
             if (controller != null && AutoPilotPlusPlugin.IgnoreGravity.Value)
@@ -227,11 +257,7 @@ namespace AutoPilotPlus
             if (player.warping) { Launching = false; return false; } // game drives heading during warp
             if (!HasTarget) { InputSailSpeedUp = false; Launching = false; return false; }
 
-            if (AutoPilotPlusPlugin.IgnoreGravity.Value)
-            {
-                player.controller.universalGravity = VectorLF3.zero;
-                player.controller.localGravity = Vector3.zero;
-            }
+            ZeroGravity(player.controller);
 
             var localPlanet = GameMain.localPlanet;
             double altitude = localPlanet == null ? double.MaxValue
@@ -345,6 +371,33 @@ namespace AutoPilotPlus
             return !_energyStalled;
         }
 
+        /// <summary>The planet's own universe velocity, blended exactly the way the game blends it.
+        ///
+        /// Below 600 m the game does NOT treat <c>player.uVelocity</c> as an absolute universe velocity.
+        /// PlayerMove_Sail.GameTick reads <c>visual_uvel = player.uVelocity - planetVelAtPoint * blend</c>
+        /// and writes velocity back as <c>relative + planetVelAtPoint * blend</c>, where
+        /// <c>blend = clamp01((600 - altitude) / 450)</c> — full below 150 m, fading to zero at 600 m.
+        /// So near a planet, uVelocity is "velocity relative to the ground, plus the ground's own motion".
+        ///
+        /// Anything that assigns uVelocity inside that band and forgets the offset is really asking for
+        /// "move at V relative to the STAR", which the game then reads as "move at V minus the planet's
+        /// orbital velocity relative to the GROUND" — a few hundred m/s in a direction that has nothing to
+        /// do with the intended heading. That is what made ground launches sling the mecha sideways and
+        /// drop it back through the Sail-retain floor, so it never actually left the planet.
+        ///
+        /// The 600/450 constants mirror PlayerMove_Sail.GameTick and are deliberately NOT the SpaceAltitude
+        /// config: they describe the game's frame blend, not our idea of where space starts.</summary>
+        private static VectorLF3 PlanetFrameVelocity(Player player, PlanetData localPlanet, double altitude)
+        {
+            if (localPlanet == null) return VectorLF3.zero;
+            double blend = (600.0 - altitude) / 450.0;
+            if (blend <= 0.0) return VectorLF3.zero;
+            if (blend > 1.0) blend = 1.0;
+            // player.position is the planet-local position — the same argument the game itself passes
+            // from PlayerMove_Sail.ResetSailState.
+            return localPlanet.GetUniversalVelocityAtLocalPoint(GameMain.gameTime, player.position) * blend;
+        }
+
         /// <summary>Launch-to-orbit handler: climb straight outward from the planet we're standing on up to
         /// OrbitAltitude, then brake to a gentle drift and clear the target (which disarms us) — leaving the
         /// mecha holding in high orbit. Used when the selected target IS the local planet, so there is no
@@ -363,7 +416,10 @@ namespace AutoPilotPlus
                 float cap = AutoPilotPlusPlugin.LaunchClimbSpeed.Value;
                 float frac = Mathf.Clamp01((float)(altitude / Mathf.Max(1f, AutoPilotPlusPlugin.OrbitAltitude.Value)));
                 float climbSpeed = cap * Mathf.Lerp(0.3f, 1f, Mathf.Clamp01(frac / 0.5f));
-                player.uVelocity = outward * climbSpeed;
+                // Same planet-frame correction as ClimbToSpace: this leg starts on the surface, well
+                // inside the band where the game reads uVelocity relative to the moving planet.
+                VectorLF3 climbVel = outward * climbSpeed;
+                player.uVelocity = climbVel + PlanetFrameVelocity(player, localPlanet, altitude);
                 LaunchStatus = $"launching to orbit… ({altitude:0} m)";
                 if (GameMain.gameTick % 30 == 0)
                     AutoPilotPlusPlugin.Dbg($"orbit climb alt={altitude:0} climbSpeed={climbSpeed:0}");
@@ -410,7 +466,11 @@ namespace AutoPilotPlus
             // climb out as fast as possible on thrust alone — no boost, no warp.
             float cap = AutoPilotPlusPlugin.LaunchClimbSpeed.Value;
             float climbSpeed = cap * Mathf.Lerp(0.3f, 1f, Mathf.Clamp01(climbFrac / 0.5f));
-            player.uVelocity = steer * climbSpeed;
+            // climbSpeed is the speed we want relative to the GROUND, so hand the game the planet-frame
+            // offset it expects (see PlanetFrameVelocity). Without it the whole climb is computed in the
+            // star's frame and the mecha is left behind by the orbiting planet instead of climbing.
+            VectorLF3 climbVel = steer * climbSpeed;
+            player.uVelocity = climbVel + PlanetFrameVelocity(player, localPlanet, altitude);
 
             if (GameMain.gameTick % 60 == 0)
                 AutoPilotPlusPlugin.Dbg($"climb-out alt={altitude:0} climbSpeed={climbSpeed:0} " +
@@ -434,7 +494,6 @@ namespace AutoPilotPlus
             double rangeThreshold = AutoPilotPlusPlugin.WarpMinRangeAU.Value * AutoPilotPlusPlugin.UnitsPerAU.Value;
             if (CruiseAssistPlusPlugin.TargetRange < rangeThreshold) { LastWarpReason = "too close"; return; }
             if (Speed < AutoPilotPlusPlugin.SpeedToWarp.Value) { LastWarpReason = "too slow"; return; }
-            if (!HasWarper) { LastWarpReason = "no warper"; return; }
 
             if (mecha.coreEnergy <= mecha.warpStartPowerPerSpeed * move.maxWarpSpeed)
             {
@@ -442,24 +501,40 @@ namespace AutoPilotPlus
                 return;
             }
 
-            if (mecha.UseWarper())
+            // Mirror the game's own warp start (PlayerMove_Sail.GameTick): take a warper from the
+            // inventory, and fall back to the mecha's auto-replenish. We used to refuse outright on an
+            // empty warper slot, so with auto-replenish on the panel just read "no warper" forever while
+            // pressing the warp key manually worked fine. Vanilla ignores the second UseWarper's result;
+            // we check it so a failed replenish can't leave warpCommand set with nothing consumed.
+            if (!mecha.UseWarper() &&
+                (!mecha.autoReplenishWarper || !mecha.AutoReplenishWarper() || !mecha.UseWarper()))
             {
-                player.warpCommand = true;
-                VFAudio.Create("warp-begin", player.transform, Vector3.zero, true, 0, -1, -1L);
-                LastWarpReason = "WARP!";
-                AutoPilotPlusPlugin.Dbg("engaged warp");
+                LastWarpReason = "no warper";
+                return;
             }
+
+            player.warpCommand = true;
+            VFAudio.Create("warp-begin", player.transform, Vector3.zero, true, 0, -1, -1L);
+            LastWarpReason = "WARP!";
+            AutoPilotPlusPlugin.Dbg("engaged warp");
         }
 
         /// <summary>Redirect the mecha's velocity toward a universe position (heading only; speed comes from boost).</summary>
-        private static void SteerToward(Player player, VectorLF3 targetUPos)
+        /// <summary>Redirect the mecha's velocity toward a universe position (heading only; speed comes from
+        /// boost). Steers in the planet's frame for the same reason ApproachOrDepart does — see
+        /// <see cref="PlanetFrameVelocity"/>. Outside the 600 m band that offset is zero and this is plain
+        /// absolute steering, which is the only case reachable at the default MinClearance of 800.</summary>
+        private static void SteerToward(Player player, VectorLF3 targetUPos, PlanetData localPlanet, double altitude)
         {
-            double speed = ((VectorLF3)player.uVelocity).magnitude;
+            VectorLF3 frameVel = PlanetFrameVelocity(player, localPlanet, altitude);
+            VectorLF3 relVelocity = player.uVelocity - frameVel;
+            double speed = relVelocity.magnitude;
             if (speed < 1.0) return; // nothing to redirect yet; boost will build speed
             VectorLF3 dir = targetUPos - player.uPosition;
-            float angle = Vector3.Angle(dir, player.uVelocity);
+            float angle = Vector3.Angle(dir, relVelocity);
             float t = AutoPilotPlusPlugin.ApproachTurnRate.Value / Mathf.Max(AutoPilotPlusPlugin.ApproachMinAngle.Value, angle);
-            player.uVelocity = Vector3.Slerp(player.uVelocity, dir.normalized * speed, t);
+            VectorLF3 steered = Vector3.Slerp(relVelocity, dir.normalized * speed, t);
+            player.uVelocity = steered + frameVel;
         }
 
         private bool ApproachOrDepart(Player player, PlanetData localPlanet)
@@ -472,7 +547,7 @@ namespace AutoPilotPlus
             // Already fast and well clear of the planet: steer straight at the target ourselves.
             if (Speed > cap && altitude > Math.Max(localPlanet.realRadius, clearance))
             {
-                SteerToward(player, CruiseAssistPlusPlugin.TargetUPos);
+                SteerToward(player, CruiseAssistPlusPlugin.TargetUPos, localPlanet, altitude);
                 return true;
             }
 
@@ -500,9 +575,17 @@ namespace AutoPilotPlus
                 }
             }
 
-            float angle = Vector3.Angle(steer, player.uVelocity);
+            // Steer in the planet's frame. speedCap is derived from Speed (= visual_uvel, already
+            // ground-relative), so the slerp target has to be ground-relative too — otherwise the descent
+            // is computed in the star's frame and the mecha keeps the planet's orbital velocity as an
+            // apparent few-hundred-m/s drift, which never lets Speed fall under the 20 hand-off above.
+            // Outside the 600 m band PlanetFrameVelocity returns zero and this is the previous behaviour.
+            VectorLF3 frameVel = PlanetFrameVelocity(player, localPlanet, altitude);
+            Vector3 relVelocity = player.uVelocity - frameVel;
+            float angle = Vector3.Angle(steer, relVelocity);
             float t = AutoPilotPlusPlugin.ApproachTurnRate.Value / Mathf.Max(AutoPilotPlusPlugin.ApproachMinAngle.Value, angle);
-            player.uVelocity = Vector3.Slerp(player.uVelocity, steer.normalized * speedCap, t);
+            VectorLF3 steered = Vector3.Slerp(relVelocity, steer.normalized * speedCap, t);
+            player.uVelocity = steered + frameVel;
             return true;
         }
 

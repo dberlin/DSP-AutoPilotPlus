@@ -86,7 +86,10 @@ namespace AutoPilotPlus
             SpeedToWarp = Config.Bind("Flight", "SpeedToWarp", 1200,
                 new ConfigDescription("Minimum sail speed before warp engages.", new AcceptableValueRange<int>(100, 5000)));
             LocalWarp = Config.Bind("Flight", "LocalWarp", false, "Allow warp within the current star system.");
-            IgnoreGravity = Config.Bind("Flight", "IgnoreGravity", true, "Zero gravity while automating (cleaner take-off).");
+            IgnoreGravity = Config.Bind("Flight", "IgnoreGravity", true,
+                "Cancel the gravity pull while sailing, so cruising near a planet doesn't drag the mecha off " +
+                "course. Sail only — the game applies ground gravity before mods get a look in, so this has " +
+                "no say over walking or the take-off climb.");
             AutoLand = Config.Bind("Flight", "AutoLand", true, "Decelerate and settle onto the destination planet on arrival.");
             AutoLaunch = Config.Bind("Flight", "AutoLaunch", true,
                 "When armed with a target while on the ground, auto-launch into orbit (Walk->Fly->Sail) and cruise to it. Needs Thruster tech.");
